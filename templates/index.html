@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Multi-Board Control Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .mqtt-status {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .mqtt-status span {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+        
+        .boards-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .boards-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .board-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .board-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .board-title {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #007bff;
+        }
+        
+        .esp8266-card .board-title {
+            border-bottom-color: #28a745;
+        }
+        
+        .sensor-section {
+            margin-bottom: 30px;
+        }
+        
+        .sensor-section h3 {
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .sensor-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        
+        .sensor-item:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        
+        .sensor-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+        
+        .sensor-label {
+            color: #666;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .control-section {
+            margin-bottom: 25px;
+        }
+        
+        .control-section h4 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .control-btn.off {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+        }
+        
+        .control-btn.off:hover {
+            box-shadow: 0 6px 20px rgba(220,53,69,0.4);
+        }
+        
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .status-value {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .status-on {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-off {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .control-feedback {
+            min-height: 25px;
+            margin-top: 10px;
+        }
+        
+        .feedback-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .feedback-error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .placeholder-card {
+            background: white;
+            border-radius: 15px;
+            padding: 60px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            border: 2px dashed #28a745;
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 15px;
+            font-style: italic;
+        }
+        
+        .motion-detected {
+            color: #28a745 !important;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .motion-not-detected {
+            color: #6c757d !important;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IoT Multi-Board Control Dashboard</h1>
+        
+        <div class="mqtt-status">
+            <span id="mqtt-status">Checking connection...</span>
+        </div>
+        
+        <div class="boards-container">
+            <!-- ESP32 Board Control -->
+            <div class="board-card esp32-card">
+                <h2 class="board-title">ESP32 Board Control</h2>
+                
+                <!-- Sensor Data Section -->
+                <div class="sensor-section">
+                    <h3>Sensor Data</h3>
+                    <div class="sensor-grid">
+                        <div class="sensor-item">
+                            <div class="sensor-value motion-not-detected" id="esp32-motion">Loading...</div>
+                            <div class="sensor-label">Motion Sensor (PIR)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp32-humidity">Loading...</div>
+                            <div class="sensor-label">Humidity (%)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp32-temperature">Loading...</div>
+                            <div class="sensor-label">Temperature (°C)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp32-light">Loading...</div>
+                            <div class="sensor-label">Light Level</div>
+                        </div>
+                    </div>
+                    <div class="timestamp">
+                        Last updated: <span id="esp32-timestamp">Never</span>
+                    </div>
+                </div>
+                
+                <!-- Light 1 Control -->
+                <div class="control-section">
+                    <h4>Light 1 Control</h4>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="controlESP32Device('light', 'on')">Turn Light ON</button>
+                        <button class="control-btn off" onclick="controlESP32Device('light', 'off')">Turn Light OFF</button>
+                    </div>
+                    <div class="status-display">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-loading" id="esp32-light-status">Loading...</span>
+                    </div>
+                    <div class="control-feedback" id="esp32-light-feedback"></div>
+                </div>
+                
+                <!-- Light 2 Control -->
+                <div class="control-section">
+                    <h4>Light 2 Control</h4>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="controlESP32Device('light2', 'on')">Turn Light 2 ON</button>
+                        <button class="control-btn off" onclick="controlESP32Device('light2', 'off')">Turn Light 2 OFF</button>
+                    </div>
+                    <div class="status-display">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-loading" id="esp32-light2-status">Loading...</span>
+                    </div>
+                    <div class="control-feedback" id="esp32-light2-feedback"></div>
+                </div>
+            </div>
+            
+            <!-- ESP8266 Board Control -->
+            <div class="board-card esp8266-card">
+                <h2 class="board-title">ESP8266 Board Control</h2>
+                
+                <!-- Sensor Data Section -->
+                <div class="sensor-section">
+                    <h3>Sensor Data</h3>
+                    <div class="sensor-grid">
+                        <div class="sensor-item">
+                            <div class="sensor-value motion-not-detected" id="esp8266-motion">Loading...</div>
+                            <div class="sensor-label">Motion Sensor (PIR)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp8266-humidity">Loading...</div>
+                            <div class="sensor-label">Humidity (%)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp8266-temperature">Loading...</div>
+                            <div class="sensor-label">Temperature (°C)</div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-value" id="esp8266-light">Loading...</div>
+                            <div class="sensor-label">Light Level</div>
+                        </div>
+                    </div>
+                    <div class="timestamp">
+                        Last updated: <span id="esp8266-timestamp">Never</span>
+                    </div>
+                </div>
+                
+                <!-- Light 1 Control -->
+                <div class="control-section">
+                    <h4>Light 1 Control</h4>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="controlESP8266Device('light', 'on')">Turn Light ON</button>
+                        <button class="control-btn off" onclick="controlESP8266Device('light', 'off')">Turn Light OFF</button>
+                    </div>
+                    <div class="status-display">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-loading" id="esp8266-light-status">Loading...</span>
+                    </div>
+                    <div class="control-feedback" id="esp8266-light-feedback"></div>
+                </div>
+                
+                <!-- Light 2 Control -->
+                <div class="control-section">
+                    <h4>Light 2 Control</h4>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="controlESP8266Device('light2', 'on')">Turn Light 2 ON</button>
+                        <button class="control-btn off" onclick="controlESP8266Device('light2', 'off')">Turn Light 2 OFF</button>
+                    </div>
+                    <div class="status-display">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-loading" id="esp8266-light2-status">Loading...</span>
+                    </div>
+                    <div class="control-feedback" id="esp8266-light2-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ESP32 device control function
+    function controlESP32Device(device, action) {
+        const feedbackElement = document.getElementById(`esp32-${device}-feedback`);
+        const statusElement = document.getElementById(`esp32-${device}-status`);
+        
+        // Show loading state
+        statusElement.className = 'status-value status-loading';
+        statusElement.textContent = 'Loading...';
+        
+        fetch('/control/esp32', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device: device, action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show success feedback
+            feedbackElement.innerHTML = `<div class="feedback-success">${device} control command sent successfully!</div>`;
+            
+            // Update status optimistically
+            statusElement.className = action === 'on' ? 'status-value status-on' : 'status-value status-off';
+            statusElement.textContent = action.toUpperCase();
+            
+            // Clear feedback after 3 seconds
+            setTimeout(() => {
+                feedbackElement.innerHTML = '';
+            }, 3000);
+        })
+        .catch(error => {
+            // Show error feedback
+            feedbackElement.innerHTML = `<div class="feedback-error">Error controlling ${device}. Please try again.</div>`;
+            
+            // Reset status to loading
+            statusElement.className = 'status-value status-loading';
+            statusElement.textContent = 'Error';
+            
+            // Clear feedback after 5 seconds
+            setTimeout(() => {
+                feedbackElement.innerHTML = '';
+            }, 5000);
+        });
+    }
+    
+    // ESP8266 device control function
+    function controlESP8266Device(device, action) {
+        const feedbackElement = document.getElementById(`esp8266-${device}-feedback`);
+        const statusElement = document.getElementById(`esp8266-${device}-status`);
+        
+        // Show loading state
+        statusElement.className = 'status-value status-loading';
+        statusElement.textContent = 'Loading...';
+        
+        fetch('/control/esp8266', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device: device, action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show success feedback
+            feedbackElement.innerHTML = `<div class="feedback-success">${device} control command sent successfully!</div>`;
+            
+            // Update status optimistically
+            statusElement.className = action === 'on' ? 'status-value status-on' : 'status-value status-off';
+            statusElement.textContent = action.toUpperCase();
+            
+            // Clear feedback after 3 seconds
+            setTimeout(() => {
+                feedbackElement.innerHTML = '';
+            }, 3000);
+        })
+        .catch(error => {
+            // Show error feedback
+            feedbackElement.innerHTML = `<div class="feedback-error">Error controlling ${device}. Please try again.</div>`;
+            
+            // Reset status to loading
+            statusElement.className = 'status-value status-loading';
+            statusElement.textContent = 'Error';
+            
+            // Clear feedback after 5 seconds
+            setTimeout(() => {
+                feedbackElement.innerHTML = '';
+            }, 5000);
+        });
+    }
+    
+    // Fetch ESP32 sensor data
+    function fetchESP32SensorData() {
+        fetch('/sensor_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.esp32) {
+                    const esp32Data = data.esp32;
+                    
+                    // Update motion sensor with animation
+                    const motionElement = document.getElementById('esp32-motion');
+                    if (esp32Data.motion) {
+                        motionElement.textContent = 'Detected';
+                        motionElement.className = 'sensor-value motion-detected';
+                    } else {
+                        motionElement.textContent = 'Not Detected';
+                        motionElement.className = 'sensor-value motion-not-detected';
+                    }
+                    
+                    // Update other sensors
+                    document.getElementById('esp32-humidity').textContent = esp32Data.humidity ? esp32Data.humidity.toFixed(1) + '%' : 'N/A';
+                    document.getElementById('esp32-temperature').textContent = esp32Data.temperature ? esp32Data.temperature.toFixed(1) + '°C' : 'N/A';
+                    document.getElementById('esp32-light').textContent = esp32Data.light_level || 'N/A';
+                    
+                    // Update timestamp
+                    if (esp32Data.timestamp) {
+                        const timestamp = new Date(esp32Data.timestamp);
+                        document.getElementById('esp32-timestamp').textContent = timestamp.toLocaleTimeString();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ESP32 sensor data:', error);
+                document.getElementById('esp32-motion').textContent = 'Error';
+                document.getElementById('esp32-humidity').textContent = 'Error';
+                document.getElementById('esp32-temperature').textContent = 'Error';
+                document.getElementById('esp32-light').textContent = 'Error';
+            });
+    }
+    
+    // Fetch ESP8266 sensor data
+    function fetchESP8266SensorData() {
+        fetch('/sensor_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.esp8266) {
+                    const esp8266Data = data.esp8266;
+                    
+                    // Update motion sensor with animation
+                    const motionElement = document.getElementById('esp8266-motion');
+                    if (esp8266Data.motion) {
+                        motionElement.textContent = 'Detected';
+                        motionElement.className = 'sensor-value motion-detected';
+                    } else {
+                        motionElement.textContent = 'Not Detected';
+                        motionElement.className = 'sensor-value motion-not-detected';
+                    }
+                    
+                    // Update other sensors
+                    document.getElementById('esp8266-humidity').textContent = esp8266Data.humidity ? esp8266Data.humidity.toFixed(1) + '%' : 'N/A';
+                    document.getElementById('esp8266-temperature').textContent = esp8266Data.temperature ? esp8266Data.temperature.toFixed(1) + '°C' : 'N/A';
+                    document.getElementById('esp8266-light').textContent = esp8266Data.light_level || 'N/A';
+                    
+                    // Update timestamp
+                    if (esp8266Data.timestamp) {
+                        const timestamp = new Date(esp8266Data.timestamp);
+                        document.getElementById('esp8266-timestamp').textContent = timestamp.toLocaleTimeString();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ESP8266 sensor data:', error);
+                document.getElementById('esp8266-motion').textContent = 'Error';
+                document.getElementById('esp8266-humidity').textContent = 'Error';
+                document.getElementById('esp8266-temperature').textContent = 'Error';
+                document.getElementById('esp8266-light').textContent = 'Error';
+            });
+    }
+    
+    // Fetch ESP32 device status
+    function fetchESP32DeviceStatus() {
+        fetch('/device_status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.esp32) {
+                    const esp32Status = data.esp32;
+                    
+                    // Update Light 1 status
+                    const light1Status = document.getElementById('esp32-light-status');
+                    if (esp32Status.light === 'on') {
+                        light1Status.className = 'status-value status-on';
+                        light1Status.textContent = 'ON';
+                    } else if (esp32Status.light === 'off') {
+                        light1Status.className = 'status-value status-off';
+                        light1Status.textContent = 'OFF';
+                    } else {
+                        light1Status.className = 'status-value status-loading';
+                        light1Status.textContent = 'Unknown';
+                    }
+                    
+                    // Update Light 2 status
+                    const light2Status = document.getElementById('esp32-light2-status');
+                    if (esp32Status.light2 === 'on') {
+                        light2Status.className = 'status-value status-on';
+                        light2Status.textContent = 'ON';
+                    } else if (esp32Status.light2 === 'off') {
+                        light2Status.className = 'status-value status-off';
+                        light2Status.textContent = 'OFF';
+                    } else {
+                        light2Status.className = 'status-value status-loading';
+                        light2Status.textContent = 'Unknown';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ESP32 device status:', error);
+                document.getElementById('esp32-light-status').textContent = 'Error';
+                document.getElementById('esp32-light2-status').textContent = 'Error';
+            });
+    }
+    
+    // Fetch ESP8266 device status
+    function fetchESP8266DeviceStatus() {
+        fetch('/device_status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.esp8266) {
+                    const esp8266Status = data.esp8266;
+                    
+                    // Update Light 1 status
+                    const light1Status = document.getElementById('esp8266-light-status');
+                    if (esp8266Status.light === 'on') {
+                        light1Status.className = 'status-value status-on';
+                        light1Status.textContent = 'ON';
+                    } else if (esp8266Status.light === 'off') {
+                        light1Status.className = 'status-value status-off';
+                        light1Status.textContent = 'OFF';
+                    } else {
+                        light1Status.className = 'status-value status-loading';
+                        light1Status.textContent = 'Unknown';
+                    }
+                    
+                    // Update Light 2 status
+                    const light2Status = document.getElementById('esp8266-light2-status');
+                    if (esp8266Status.light2 === 'on') {
+                        light2Status.className = 'status-value status-on';
+                        light2Status.textContent = 'ON';
+                    } else if (esp8266Status.light2 === 'off') {
+                        light2Status.className = 'status-value status-off';
+                        light2Status.textContent = 'OFF';
+                    } else {
+                        light2Status.className = 'status-value status-loading';
+                        light2Status.textContent = 'Unknown';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ESP8266 device status:', error);
+                document.getElementById('esp8266-light-status').textContent = 'Error';
+                document.getElementById('esp8266-light2-status').textContent = 'Error';
+            });
+    }
+    
+    // Fetch MQTT connection status
+    function fetchMQTTStatus() {
+        fetch('/mqtt_status')
+            .then(response => response.json())
+            .then(data => {
+                const statusElement = document.getElementById('mqtt-status');
+                if (data.connected) {
+                    statusElement.textContent = 'MQTT Connected ✓';
+                    statusElement.style.background = 'linear-gradient(45deg, #28a745, #20c997)';
+                    statusElement.style.color = 'white';
+                } else {
+                    statusElement.textContent = 'MQTT Disconnected ✗';
+                    statusElement.style.background = 'linear-gradient(45deg, #dc3545, #c82333)';
+                    statusElement.style.color = 'white';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching MQTT status:', error);
+                const statusElement = document.getElementById('mqtt-status');
+                statusElement.textContent = 'Connection Error ⚠';
+                statusElement.style.background = 'linear-gradient(45deg, #ffc107, #e0a800)';
+                statusElement.style.color = 'black';
+            });
+    }
+    
+    // Initialize the dashboard
+    function initializeDashboard() {
+        // Initial data fetch for both boards
+        fetchESP32SensorData();
+        fetchESP32DeviceStatus();
+        fetchESP8266SensorData();
+        fetchESP8266DeviceStatus();
+        fetchMQTTStatus();
+        
+        // Set up periodic updates for both boards
+        setInterval(fetchESP32SensorData, 2000);     // Update ESP32 sensor data every 2 seconds
+        setInterval(fetchESP32DeviceStatus, 1000);   // Update ESP32 device status every 1 second
+        setInterval(fetchESP8266SensorData, 2000);   // Update ESP8266 sensor data every 2 seconds
+        setInterval(fetchESP8266DeviceStatus, 1000); // Update ESP8266 device status every 1 second
+        setInterval(fetchMQTTStatus, 5000);          // Update MQTT status every 5 seconds
+    }
+    // Start the dashboard when the page loads
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
+</script>
+
+</body>
+</html>

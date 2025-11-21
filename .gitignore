@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Certificates and Keys (IMPORTANT: Keep these secure!)
+*.pem
+*.key
+*.crt
+*.csr
+certificate_request.csr
+
+# Environment variables (contains sensitive data)
+.env
+config.env
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.qodo/
+
+# Test files
+test_*.py
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.old
