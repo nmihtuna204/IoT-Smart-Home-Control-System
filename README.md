@@ -173,7 +173,7 @@ This IoT Smart Home Control System is a comprehensive solution for home automati
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/iot-smart-home.git
+git clone https://github.com/nmihtuna204/IoT-Smart-Home-Control-System.git
 cd iot-smart-home
 ```
 
